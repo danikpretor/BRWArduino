@@ -204,12 +204,7 @@ void f_pid(){ //Функция ПИД
     pid.input = TE1;   // сообщаем регулятору текущую температуру
     pid.getResult();
     analogWrite(RELE_5, pid.output);    
-    //ploter
-    //Serial.print("TE "); Serial.print(pid.input); Serial.print(' ');
-    //Serial.print("SET "); Serial.println(pid.setpoint);
-    //Serial.print("pid.output "); Serial.println(pid.output);
   }
-
 }
 
 void setup() {
