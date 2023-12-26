@@ -121,7 +121,6 @@ void f_TE1() { //Функия чтения температуры
       sensTE.readTemp();
       TE1 = sensTE.getTempInt(); 
       sensTE.requestTemp();
-
     //return temp1;
   }
 }
@@ -136,17 +135,14 @@ void f_timer()
   timeSecs = (totalSec % 3600ul) % 60ul;  // секунды
 }
 
-
-
 void printMainWindow(); //Объявление функции
 
-void printMainWindow(){ //функция для вывода на экран меню текущих значений
+void printMainWindow() { //функция для вывода на экран меню текущих значений
   
     lcd.setCursor(0, 0); lcd.print("t:"); lcd.print(TE1); lcd.print("C"); //Температура текущая 
     lcd.setCursor(8, 0); lcd.print("T:"); lcd.print(timeCyclMins); lcd.print(":"); lcd.print(timeCyclSecs); // Время общее. Глобальный таймер
     lcd.setCursor(0, 1); lcd.print("t:"); lcd.print(tempValue); lcd.print("C"); //Температура цыкла 
     lcd.setCursor(8, 1); lcd.print("T:"); lcd.print(timesValue); lcd.print(" min"); //Время цыкла
-    
 }
 
 void printSettingsValue();
@@ -172,7 +168,6 @@ void printSettingsValue() {  //Функция для вывода на экра�
         lcd.print(": ");
         lcd.print(vals[LINES * screenPos + i]);
       }
-
     }
   }
 
@@ -209,7 +204,6 @@ void f_pid(){ //Функция ПИД
     //Serial.print("SET "); Serial.println(pid.setpoint);
     //Serial.print("pid.output "); Serial.println(pid.output);
   }
-
 }
 
 void setup() {
@@ -295,7 +289,6 @@ void loop() {
           }
           lcd.clear();
           printMainMenu();
-
         }
       }
 
