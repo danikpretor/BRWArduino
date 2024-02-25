@@ -391,6 +391,7 @@ void loop() {
 
   if (StrStp) {
 
+      
     digitalWrite(LEDSTART, HIGH);
   //---------------------------------------
     timesValue = vals[valsIndex]; //Передаём Время паузы цыкла
