@@ -54,7 +54,7 @@ String settingsValue[]  = { //Перечень окна с натройками
 bool StrStp = 0; // Состояние переменной инициализирует работу программы
 
 String settingsMainMenu[]  = { // Главное окно меню
-  "Setting",
+  "Setpoints",
   "Window",
   "Stop",
 };
@@ -65,18 +65,12 @@ String settingsStart[]  = { //Меню запуска програмы
 };
 
 // - ПАРАМЕТРЫ ТАЙМЕРА НАЧАЛО
-#include "GyverTimer.h" 
-
-GTimer TimerBRW_1(MS);
-GTimer TimerBRW_2(MS);
-GTimer TimerBRW_3(MS);
 
 uint32_t period = 1000;
 
 bool flagCycl = false;
 bool timerStart = true;
 int valsIndex = 0, k = 0, ai = 0, ti = 0, fulTim = 0, summ_arr = 0;
-uint32_t timer_brw1, timer_brw2, timer_brw3;
 //Переменные для глобального таймера
 uint32_t totalMills; //Милесек
 uint32_t totalSec; // секунды
@@ -108,11 +102,13 @@ int PIDperiod = 500;
 // - ПАРАМЕТРЫ датчика температуры
 #include <microDS18B20.h>
 MicroDS18B20<6> sensTE;
+MicroDS18B20<9> sensTE2;
 
-int temp1, TE1; // переменная для хранения температуры
-int tempValue = 0; // переменная для хранения температуры 
-int timesValue = 0;
+int temp1, TE1, temp2, TE2; // переменная для хранения температуры
+int tempValue = 0; // переменная для запаси температуры из массива Value
+int timesValue = 0; // переменная для запаси времени из массива Value
 
+void f_TE1(); //Объявление функции
 void f_TE1() { //Функия чтения температуры
   static uint32_t tmr2;
     if (millis() - tmr2 >= PIDperiod) {
@@ -126,8 +122,21 @@ void f_TE1() { //Функия чтения температуры
   }
 }
 
-void f_timer(); //Объявление функции
+void f_TE2(); //Объявление функции
+void f_TE2() { //Функия чтения температуры
+  static uint32_t tmr2;
+    if (millis() - tmr2 >= PIDperiod) {
+      tmr2 = millis();    
+    
+      sensTE2.readTemp();
+      TE2 = sensTE2.getTempInt(); 
+      sensTE2.requestTemp();
 
+    //return temp1;
+  }
+}
+
+void f_timer(); //Объявление функции
 void f_timer()
 {
   totalSec = millis() / 1000ul;
@@ -136,10 +145,7 @@ void f_timer()
   timeSecs = (totalSec % 3600ul) % 60ul;  // секунды
 }
 
-
-
 void printMainWindow(); //Объявление функции
-
 void printMainWindow(){ //функция для вывода на экран меню текущих значений
   
     lcd.setCursor(0, 0); lcd.print("t:"); lcd.print(TE1); lcd.print("C"); //Температура текущая 
@@ -150,29 +156,36 @@ void printMainWindow(){ //функция для вывода на экран м�
 }
 
 void printSettingsValue();
-
 void printSettingsValue() {  //Функция для вывода на экран меню настроек
   lcd.clear();  
   screenPos = arrowPos / LINES;   // ищем номер экрана (0..3 - 0, 4..7 - 1)
 
     for (byte i = 0; i < LINES; i++) {  // для всех строк
-      
+
       lcd.setCursor(0, i); // курсор в начало  
       
       // если курсор находится на выбранной строке
-      if (arrowPos == LINES * screenPos + i) lcd.write(126);  // рисуем стрелку
+      if (arrowPos == LINES * screenPos + i) {
+        if (settingPosition) {
+          lcd.write(62); // рисуем стрелку >
+        }
+        else {
+          lcd.write(126); // рисуем стрелку ->
+        }
+      }  
       else lcd.write(32);     // рисуем пробел
 
       // если пункты меню закончились, покидаем цикл for
       if (LINES * screenPos + i == SETTINGS_AMOUNT) break;
+      
+      //settingPosition
 
       // выводим имя и значение пункта меню
       lcd.print(settingsValue[LINES * screenPos + i]);
       if (arrowPos < SETTINGS_SETTING) {
-        lcd.print(": ");
+        lcd.print(": ");     
         lcd.print(vals[LINES * screenPos + i]);
       }
-
     }
   }
 
@@ -195,7 +208,6 @@ void printMainMenu(){ //Функция для вывода на экран гл�
 }
 
 void f_pid();
-
 void f_pid(){ //Функция ПИД
   
   static uint32_t tmr3;
@@ -205,6 +217,11 @@ void f_pid(){ //Функция ПИД
     pid.getResult();
     analogWrite(RELE_5, pid.output);    
   }
+}
+
+void cooling_case();
+void cooling_case(){
+  //todo
 }
 
 void setup() {
@@ -220,12 +237,15 @@ void setup() {
   lcd.clear();
   lcd.setCursor(0, 0); lcd.print(" Brewery V 0.6");
   lcd.setCursor(0, 1); lcd.print("");
-
-  TimerBRW_2.setInterval(100000); //Таймер для вывода сообщения в консоль  
   
-  sensTE.requestTemp();     // запрос температуры
-  delay(500);
   f_TE1();
+
+  f_TE2();
+  
+  sensTE.requestTemp();     // запрос температуры 1
+  sensTE2.requestTemp();    // запрос температуры 1
+ 
+ delay(500);
 
   pinMode(RELE_5, OUTPUT);
   pinMode(LEDSTART, OUTPUT);
@@ -247,7 +267,8 @@ void setup() {
 void loop() {
 
   f_timer(); //Запуск глобального таймера
-  f_TE1(); //переменная для хранения температуры
+  f_TE1(); //функция измерения температуры 1
+  f_TE2(); //функция измерения температуры 1
   static int timeSecs_tmp = 0;
   enc1.tick();
   
@@ -270,7 +291,6 @@ void loop() {
       }
       if (enc1.isClick()) {
         if (0 == arrowPos) {
-          lcd.clear();
           printSettingsValue();
           menu = Menu::SettingsValue;
         }
@@ -347,6 +367,7 @@ void loop() {
           Serial.println("SettingsValue");
           menu = Menu::MainMenu;
         }
+        printSettingsValue();
       }
 
       break;
@@ -372,8 +393,8 @@ void loop() {
 
     digitalWrite(LEDSTART, HIGH);
   //---------------------------------------
-    timesValue = vals[valsIndex]; //Время паузы цыкла
-    tempValue = vals[valsIndex+1]; //Температура паузы цыкла 
+    timesValue = vals[valsIndex]; //Передаём Время паузы цыкла
+    tempValue = vals[valsIndex+1]; //Передаём Температура паузы цыкла 
 
     if (TE1 <= tempValue - 1) { 
       pid.setpoint = tempValue; //Передаём температуру в пид регулятор до момента TE - 1
@@ -383,9 +404,6 @@ void loop() {
       pid.setpoint = 0; //Передаём температуру в пид регулятор 0, для избежания перерегулирования
       f_pid();
     }
-
-    //bool flagCycl = false;
-    //bool timerStart = true;
 
     if (TE1 >= tempValue - 1) {  // Это условие точно нужно?
       
