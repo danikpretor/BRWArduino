@@ -1,5 +1,17 @@
-  static uint32_t tmr3;
-  if (millis() - tmr3 >= PIDperiod) {
+
+void printMainWindow() { //функция для вывода на экран меню текущих значений
+    lcd.setCursor(0, 0); lcd.print("t:"); lcd.print(TE1); lcd.print("C"); //Температура текущая 
+    lcd.setCursor(8, 0); lcd.print("T:"); lcd.print(timeCyclMins); lcd.print(":"); lcd.print(timeCyclSecs); // Время общее. Глобальный таймер
+    lcd.setCursor(0, 1); lcd.print("t:"); lcd.print(tempValue); lcd.print("C"); //Температура цыкла 
+    lcd.setCursor(8, 1); lcd.print("T:"); lcd.print(timesValue); lcd.print(" min"); //Время цыкла
+}
+
+int settingsWorkingWindow[][]  = {  //Перечень параметров для вывода информации на/в рабочее окно
+    {line_11, line_12},             // "t:", TE1 - Температура текущая. "T:", timeCyclMins, timeCyclSecs - Время общее. Таймер процесса
+    {line_21, line_22},             // "t:", tempValue - Температура цыкла, "T:" timesValue - Время цыкла
+    {line_31, line_32},             // 
+    {line_41, line_42}              // Глобальный таймер
+};
 
 
 // Исправление функции глобального таймера
@@ -13,6 +25,8 @@ void f_timer(){
     timeSecs = (totalSec % 3600ul) % 60ul;  // секунды глобальная переменная
   }
 }
+
+
 
 printWorkingWindow();
 void printWorkingWindow(){ //Функция для вывода на экран главное меню
