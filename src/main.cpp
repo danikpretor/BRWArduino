@@ -8,6 +8,7 @@
 #define SETTINGS_MENU 3 // количество настроек
 
 #define LEDSTART 7 // пин индикация старта красный светодиод
+#define FANACTIVATION  10 // пин включения вентельятора
 
 bool controlState = false;  // клик
 
@@ -30,26 +31,25 @@ int8_t entVal = 0;
 int8_t screenPos = 0; // номер "экрана"
 int8_t dataEntry = 0; // переменная для хранения данных в диапахоне от 0 до 60 и от 0 до 100
 
-bool settingPosition = false;  // переменная для ввода хгачений в настройка. Это флаг миняющий сой состояние при клике энкодера
-bool checkTE1 = 0;
+bool settingPosition = false;  // переменная для ввода значений в настройка. Это флаг миняющий свой состояние при клике энкодера
 
 Menu menu;
 // названия параметров
 String settingsValue[]  = { //Перечень окна с натройками
-  "Time-1", //Время 
-  "Temp-1", //Температура
-  "Time-2",
-  "Temp-2",
-  "Time-3",
-  "Temp-3",
-  "Time-4",
-  "Temp-4",
-  "Time-5",
-  "Temp-5",
-  "Time-6",
-  "Temp-6",
-  "Exit",
-}; //
+  "Time-1", //Время           0
+  "Temp-1", //Температура     1
+  "Time-2", //                2
+  "Temp-2", //                3
+  "Time-3", //                4
+  "Temp-3", //                5
+  "Time-4", //                6
+  "Temp-4", //                7
+  "Time-5", //                8
+  "Temp-5", //                9
+  "Time-6", //                10
+  "Temp-6", //                11
+  "Exit",   //                12
+};
 
 bool StrStp = 0; // Состояние переменной инициализирует работу программы
 
@@ -68,8 +68,8 @@ String settingsStart[]  = { //Меню запуска програмы
 
 uint32_t period = 1000;
 
-bool flagCycl = false;
-bool timerStart = true;
+
+
 int valsIndex = 0, k = 0, ai = 0, ti = 0, fulTim = 0, summ_arr = 0;
 //Переменные для глобального таймера
 uint32_t totalMills; //Милесек
@@ -94,7 +94,7 @@ int timeCyclSecs = 0;  // секунды
 //
 //16:52:14.353 -> result: PI p: 7.72	PI i: 0.41	PID p: 21.56	PID i: 0.25	PID d: 64.99
 GyverPID pid(21.56, 0.25, 0);
-int PIDperiod = 500;
+int PIDperiod = 1000;
 
 #define RELE_5 5
 // - ПАРАМЕТРЫ ПИД КОНЕЦ
@@ -104,49 +104,39 @@ int PIDperiod = 500;
 MicroDS18B20<6> sensTE;
 MicroDS18B20<9> sensTE2;
 
-int temp1, TE1, temp2, TE2; // переменная для хранения температуры
+int temp1, TE1, temp2, TE2; // переменная для хранения температуры te1 для ТЭН te2 для куллера
 int tempValue = 0; // переменная для запаси температуры из массива Value
 int timesValue = 0; // переменная для запаси времени из массива Value
+int fanActivationTemp = 35; // Максимальная температура внутри корпуса
 
-void f_TE1(); //Объявление функции
-void f_TE1() { //Функия чтения температуры
+void f_TE1(); //Функия чтения температуры
+void f_TE1() { 
   static uint32_t tmr2;
-    if (millis() - tmr2 >= PIDperiod) {
-      tmr2 = millis();    
+  if (millis() - tmr2 >= PIDperiod) {
+    tmr2 = millis();    
     
-      sensTE.readTemp();
-      TE1 = sensTE.getTempInt(); 
-      sensTE.requestTemp();
+    sensTE.readTemp();
+    TE1 = sensTE.getTempInt(); //чтение температуры с датчика для ТЭН
+    sensTE.requestTemp();
+
+    sensTE2.readTemp();
+    TE2 = sensTE2.getTempInt(); //чтение температуры с датчика для куллера
+    sensTE2.requestTemp();
 
     //return temp1;
   }
 }
 
-void f_TE2(); //Объявление функции
-void f_TE2() { //Функия чтения температуры
-  static uint32_t tmr2;
-    if (millis() - tmr2 >= PIDperiod) {
-      tmr2 = millis();    
-    
-      sensTE2.readTemp();
-      TE2 = sensTE2.getTempInt(); 
-      sensTE2.requestTemp();
-
-    //return temp1;
-  }
-}
-
-void f_timer(); //Объявление функции
-void f_timer()
-{
+void f_timer(); //Глобальный таймер
+void f_timer() {
   totalSec = millis() / 1000ul;
   timeHours = (totalSec / 3600ul);        // часы
   timeMins = (totalSec % 3600ul) / 60ul;  // минуты
   timeSecs = (totalSec % 3600ul) % 60ul;  // секунды
 }
 
-void printMainWindow(); //Объявление функции
-void printMainWindow(){ //функция для вывода на экран меню текущих значений
+void printMainWindow(); //функция для вывода на экран меню текущих значений
+void printMainWindow() { 
   
     lcd.setCursor(0, 0); lcd.print("t:"); lcd.print(TE1); lcd.print("C"); //Температура текущая 
     lcd.setCursor(8, 0); lcd.print("T:"); lcd.print(timeCyclMins); lcd.print(":"); lcd.print(timeCyclSecs); // Время общее. Глобальный таймер
@@ -164,21 +154,19 @@ void printSettingsValue() {  //Функция для вывода на экра�
 
       lcd.setCursor(0, i); // курсор в начало  
       
-      // если курсор находится на выбранной строке
+      // если курсор находится на выбранной строке 
       if (arrowPos == LINES * screenPos + i) {
-        if (settingPosition) {
+        if (settingPosition and arrowPos != SETTINGS_AMOUNT-1) {
           lcd.write(62); // рисуем стрелку >
         }
         else {
           lcd.write(126); // рисуем стрелку ->
         }
       }  
-      else lcd.write(32);     // рисуем пробел
+      else lcd.write(32); // рисуем пробел
 
       // если пункты меню закончились, покидаем цикл for
       if (LINES * screenPos + i == SETTINGS_AMOUNT) break;
-      
-      //settingPosition
 
       // выводим имя и значение пункта меню
       lcd.print(settingsValue[LINES * screenPos + i]);
@@ -189,9 +177,9 @@ void printSettingsValue() {  //Функция для вывода на экра�
     }
   }
 
+//Функция для вывода на экран главное меню
 void printMainMenu();
-
-void printMainMenu(){ //Функция для вывода на экран главное меню
+void printMainMenu() { 
   lcd.clear();  
   screenPos = arrowPos / LINES;   // ищем номер экрана (0..3 - 0, 4..7 - 1)
 
@@ -207,9 +195,9 @@ void printMainMenu(){ //Функция для вывода на экран гл�
   }
 }
 
+//Функция ПИД
 void f_pid();
-void f_pid(){ //Функция ПИД
-  
+void f_pid(){ 
   static uint32_t tmr3;
   if (millis() - tmr3 >= PIDperiod) {
     tmr3 = millis();
@@ -219,181 +207,35 @@ void f_pid(){ //Функция ПИД
   }
 }
 
+//функция для охлаждения корпуса, управление кулером // FANACTIVATION
 void cooling_case();
 void cooling_case(){
+  static uint32_t tmr5;
+  if (millis() - tmr5 >= PIDperiod * 2) {
+    tmr5 = millis();
+    if(TE1 > fanActivationTemp ){
+      digitalWrite(FANACTIVATION, HIGH);
+    }
+    else if (TE1 <= fanActivationTemp - 5 ) {
+      digitalWrite(FANACTIVATION, LOW);
+    } 
+  }
+}
+
+//функция световой индикации
+void LED_indication();
+void LED_indication(){
   //todo
 }
 
-void setup() {
-  Serial.begin(9600); //Волшебная цифра 
-  enc1.setType(TYPE2); //Тип энкодера
-  enc1.setFastTimeout(100);
-
-  lcd.init();
-  lcd.backlight();
-  
-  Serial.println("Start");
-  
-  lcd.clear();
-  lcd.setCursor(0, 0); lcd.print(" Brewery V 0.6");
-  lcd.setCursor(0, 1); lcd.print("");
-  
-  f_TE1();
-
-  f_TE2();
-  
-  sensTE.requestTemp();     // запрос температуры 1
-  sensTE2.requestTemp();    // запрос температуры 1
- 
- delay(500);
-
-  pinMode(RELE_5, OUTPUT);
-  pinMode(LEDSTART, OUTPUT);
-
-  pid.setDirection(NORMAL); // направление регулирования (NORMAL/REVERSE). ПО УМОЛЧАНИЮ СТОИТ NORMAL - нагрев
-  pid.setLimits(0, 255);    // пределы (ставим для 8 битного ШИМ). ПО УМОЛЧАНИЮ СТОЯТ 0 И 255
-  
-  delay(3000);
-
-  lcd.clear();
-  lcd.setCursor(4, 0); lcd.print("TE ");
-  lcd.setCursor(8, 0); lcd.print(TE1);
-
-  delay(2000);
-  //menu = Menu::MainMenu;
-  printMainMenu();
-}
-
-void loop() {
-
-  f_timer(); //Запуск глобального таймера
-  f_TE1(); //функция измерения температуры 1
-  f_TE2(); //функция измерения температуры 1
-  static int timeSecs_tmp = 0;
-  enc1.tick();
-  
-  switch (menu) {
-
-    case Menu::MainMenu: //Главное Меню
-      if (enc1.isTurn()) {
-        int increment = 0;  // локальная переменная направления
-        // получаем направление   
-        if (enc1.isRight()) increment = 1;
-        if (enc1.isLeft()) increment = -1;
-        arrowPos += increment;  // двигаем курсор  
-        arrowPos = constrain(arrowPos, 0, SETTINGS_MENU - 1); // ограничиваем
-
-        increment = 0;  // обнуляем инкремент
-
-        printMainMenu(); //Выводим на экран соответсвующие меню
-        Serial.println(arrowPos);
-        
-      }
-      if (enc1.isClick()) {
-        if (0 == arrowPos) {
-          printSettingsValue();
-          menu = Menu::SettingsValue;
-        }
-        if (1 == arrowPos) {
-          lcd.clear();
-          printMainWindow();
-          menu = Menu::MainWindow;
-        }
-        if (2 == arrowPos) {
-          StrStp = !StrStp;
-				  if (StrStp == 1){
-            settingsMainMenu[2] = "Start";
-            valsIndex == 0;
-          }
-          else {
-            settingsMainMenu[2] = "Stop";
-          }
-          lcd.clear();
-          printMainMenu();
-
-        }
-      }
-
-      break;
-
-    case Menu::SettingsValue: //Меню настроек
-
-      if (!settingPosition) {
-        if (enc1.isTurn()) {
-          int increment = 0;  // локальная переменная направления
-        
-          // получаем направление   
-          if (enc1.isRight()) increment = 1;
-          if (enc1.isLeft()) increment = -1;
-          arrowPos += increment;  // двигаем курсор  
-          arrowPos = constrain(arrowPos, 0, SETTINGS_AMOUNT - 1); // ограничиваем
-
-          increment = 0;  // обнуляем инкремент
-      
-          printSettingsValue();
-        }
-      }
-      else if (settingPosition) {
-        if (enc1.isTurn()) {
-          int increment = 0;  // локальная переменная направления
-          if (arrowPos < SETTINGS_SETTING) {
-            
-            if (enc1.isRight()) increment = 1;
-            if (enc1.isFastR()) increment = 5;
-            if (enc1.isLeft()) increment = -1;
-            if (enc1.isFastL()) increment = -5;
-
-            vals[arrowPos] += increment;
-            if (arrowPos % 2 == 0) {
-              dataEntry = constrain(vals[arrowPos], 0, 60); // Ограничени для времени
-              vals[arrowPos] = dataEntry;
-            }
-            else {
-              dataEntry = constrain(vals[arrowPos], 0, 100); // Ограничени для температуры
-              vals[arrowPos] = dataEntry;
-            }
-          }
-          printSettingsValue();
-        }
-      }
-      if (enc1.isClick()){
-        settingPosition = !settingPosition;
-        Serial.println("settingPosition -> "); Serial.println(settingPosition);
-       
-        if (arrowPos == SETTINGS_AMOUNT-1) {
-          arrowPos = 0;
-          lcd.clear();
-          printMainMenu(); 
-          Serial.println("SettingsValue");
-          menu = Menu::MainMenu;
-        }
-        printSettingsValue();
-      }
-
-      break;
-
-    case Menu::MainWindow:
-      if(timeSecs_tmp != timeSecs) {
-        timeSecs_tmp = timeSecs;
-        printMainWindow();
-      }
-      if (enc1.isClick()){ //По нажатию проваливаемся в соответсвующее меню
-        lcd.clear();
-        Serial.println("MainWindow");
-        printMainMenu();  
-        menu = Menu::MainMenu;
-      }     
-      break;   
-
-    case Menu::StartStopSettings:
-      break;
-  }
-
-  if (StrStp) {
-
-      
+//функци управления процессом термопауз
+void pause_control_function(bool permission);
+void pause_control_function(bool permission){
+    if (permission) {
+    
+    static bool timerStart = true; //Флаг для запуска таймера при достиччжении заданной температруры
+    static bool flagCycl = false; //Флаг для запуска цикла
     digitalWrite(LEDSTART, HIGH);
-  //---------------------------------------
     timesValue = vals[valsIndex]; //Передаём Время паузы цыкла
     tempValue = vals[valsIndex+1]; //Передаём Температура паузы цыкла 
 
@@ -444,9 +286,180 @@ void loop() {
   }
   else {
     digitalWrite(LEDSTART, LOW);
-    
     pid.setpoint = 0;
     f_pid();
   }
+}
+
+
+void setup() {
+  Serial.begin(9600); //Волшебная цифра 
+  enc1.setType(TYPE2); //Тип энкодера
+  enc1.setFastTimeout(100);
+
+  lcd.init();
+  lcd.backlight();
+  
+  Serial.println("Start");
+  
+  lcd.clear();
+  lcd.setCursor(0, 0); lcd.print(" Brewery V 0.6");
+  lcd.setCursor(0, 1); lcd.print("");
+  
+  f_TE1();
+  
+  sensTE.requestTemp();     // запрос температуры 1
+  sensTE2.requestTemp();    // запрос температуры 1
+ 
+  delay(500);
+
+  pinMode(RELE_5, OUTPUT);
+  pinMode(LEDSTART, OUTPUT);
+  pinMode(FANACTIVATION, OUTPUT);
+
+  pid.setDirection(NORMAL); // направление регулирования (NORMAL/REVERSE). ПО УМОЛЧАНИЮ СТОИТ NORMAL - нагрев
+  pid.setLimits(0, 255);    // пределы (ставим для 8 битного ШИМ). ПО УМОЛЧАНИЮ СТОЯТ 0 И 255
+  
+  delay(3000);
+
+  lcd.clear();
+  lcd.setCursor(4, 0); lcd.print("TE ");
+  lcd.setCursor(8, 0); lcd.print(TE1);
+
+  delay(2000);
+
+  printMainMenu();
+}
+
+void loop() {
+
+  f_timer(); //Запуск глобального таймера
+  f_TE1(); //функция измерения температуры 1
+  LED_indication(); //функция световой индикации
+  cooling_case(); //функция для охлаждения корпуса, управление кулером
+
+  static int timeSecs_tmp = 0;
+  enc1.tick();
+  
+  switch (menu) {
+
+    case Menu::MainMenu: //Главное Меню
+      if (enc1.isTurn()) {
+        int increment = 0;  // локальная переменная направления
+        // получаем направление   
+        if (enc1.isRight()) increment = 1;
+        if (enc1.isLeft()) increment = -1;
+        arrowPos += increment;  // двигаем курсор  
+        arrowPos = constrain(arrowPos, 0, SETTINGS_MENU - 1); // ограничиваем
+
+        increment = 0;  // обнуляем инкремент
+
+        printMainMenu(); //Выводим на экран соответсвующие меню
+        Serial.println(arrowPos);
+        
+      }
+      if (enc1.isClick()) {
+        if (0 == arrowPos) {
+          printSettingsValue();
+          menu = Menu::SettingsValue;
+        }
+        if (1 == arrowPos) {
+          lcd.clear();
+          printMainWindow();
+          menu = Menu::MainWindow;
+        }
+        if (2 == arrowPos) {
+          StrStp = !StrStp;
+				  if (StrStp == 1){
+            settingsMainMenu[2] = "Start";
+            valsIndex == 0;
+          }
+          else {
+            settingsMainMenu[2] = "Stop";
+          }
+          lcd.clear();
+          printMainMenu();
+        }
+      }
+
+      break;
+
+    case Menu::SettingsValue: //Меню настроек
+
+      if (!settingPosition) {
+        if (enc1.isTurn()) {
+          int increment = 0;  // локальная переменная направления
+        
+          // получаем направление   
+          if (enc1.isRight()) increment = 1;
+          if (enc1.isLeft()) increment = -1;
+          arrowPos += increment;  // двигаем курсор  
+          arrowPos = constrain(arrowPos, 0, SETTINGS_AMOUNT - 1); // ограничиваем
+
+          increment = 0;  // обнуляем инкремент
+      
+          printSettingsValue();
+        }
+      }
+      else if (settingPosition) {
+        if (enc1.isTurn()) {
+          int increment = 0;  // локальная переменная направления
+          if (arrowPos < SETTINGS_SETTING) {
+            
+            if (enc1.isRight()) increment = 1;
+            if (enc1.isFastR()) increment = 5;
+            if (enc1.isLeft()) increment = -1;
+            if (enc1.isFastL()) increment = -5;
+
+            vals[arrowPos] += increment;
+            if (arrowPos % 2 == 0) {
+              dataEntry = constrain(vals[arrowPos], 0, 60); // Ограничени для времени
+              vals[arrowPos] = dataEntry;
+            }
+            else {
+              dataEntry = constrain(vals[arrowPos], 0, 100); // Ограничени для температуры
+              vals[arrowPos] = dataEntry;
+            }
+          }
+          printSettingsValue();
+        }
+      }
+      if (enc1.isClick()){
+        settingPosition = !settingPosition;
+        //Serial.println("settingPosition -> "); Serial.println(settingPosition);
+        printSettingsValue();
+        
+        if (arrowPos == SETTINGS_AMOUNT-1) {
+          settingPosition = !settingPosition;
+          arrowPos = 0;
+          printMainMenu(); 
+          //Serial.println("SettingsValue");
+          menu = Menu::MainMenu;
+        }
+      }
+
+
+
+      break;
+
+    case Menu::MainWindow:
+      if(timeSecs_tmp != timeSecs) {
+        timeSecs_tmp = timeSecs;
+        printMainWindow();
+      }
+      if (enc1.isClick()){ //По нажатию проваливаемся в соответсвующее меню
+        lcd.clear();
+        Serial.println("MainWindow");
+        printMainMenu();  
+        menu = Menu::MainMenu;
+      }     
+      break;   
+
+    case Menu::StartStopSettings:
+      break;
+  }
+  
+  pause_control_function(StrStp);
+
 //---------------------------------------
 }
