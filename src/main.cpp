@@ -1,7 +1,5 @@
 #include <Arduino.h>
 
-// - ПАРАМЕТРЫ МЕНЮ НАЧАЛО
-
 #define LINES 2   // количество строк дисплея
 #define SETTINGS_AMOUNT 13  // количество настроек
 #define SETTINGS_SETTING 12  // количество настроек
@@ -13,11 +11,11 @@
 bool controlState = false;  // клик
 
 // пины энкодера
-#define CLK 2
-#define DT 3
-#define SW 4
+#define CLK 2 // CLK (тактовые выводы энкодера)
+#define DT 3 //DT (тактовые выводы энкодера)
+#define SW 4 //SW (вывод кнопки) 
 
-enum class Menu {  MainMenu,  MainWindow,  SettingsValue,  StartStopSettings }; //Создаём классы
+enum class Menu {MainMenu,  MainWindow,  SettingsValue,  StartStopSettings}; //Создаём классы
 
 #include <GyverEncoder.h>
 Encoder enc1(CLK, DT, SW);  // для работы c кнопкой
@@ -232,7 +230,7 @@ void pause_control_function(bool permission);
 void pause_control_function(bool permission){
     if (permission) {
     
-    static bool timerStart = true; //Флаг для запуска таймера при достиччжении заданной температруры
+    static bool timerStart = true; //Флаг для запуска таймера при достижении заданной температруры
     static bool flagCycl = false; //Флаг для запуска цикла
     digitalWrite(LEDSTART, HIGH);
     timesValue = vals[valsIndex]; //Передаём Время паузы цыкла
@@ -380,7 +378,6 @@ void loop() {
           printMainMenu();
         }
       }
-
       break;
 
     case Menu::SettingsValue: //Меню настроек
@@ -436,9 +433,6 @@ void loop() {
           menu = Menu::MainMenu;
         }
       }
-
-
-
       break;
 
     case Menu::MainWindow:
