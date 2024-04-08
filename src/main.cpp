@@ -6,7 +6,7 @@
 #define SETTINGS_MENU 3 // количество настроек
 
 #define LEDSTART 7 // пин индикация старта красный светодиод
-#define FANACTIVATION  10 // пин включения вентельятора
+#define FANACTIVATION  10 // пин включения вентельятора (реле)
 
 bool controlState = false;  // клик
 
@@ -93,12 +93,12 @@ int timeCyclSecs = 0;  // секунды
 GyverPID pid(21.56, 0.25, 0);
 int PIDperiod = 1000;
 
-#define RELE_5 5
+#define RELE_5 5 //Реле управления нагрузкой
 // - ПАРАМЕТРЫ ПИД КОНЕЦ
 
 // - ПАРАМЕТРЫ датчика температуры
 #include <microDS18B20.h>
-MicroDS18B20<6> sensTE1;   ; // 6pin (пин) для 
+MicroDS18B20<6> sensTE1; // 6pin (пин) для 
 MicroDS18B20<9> sensTE2; // 9pin (пин) для 
 
 int temp1, TE1, temp2, TE2; // переменная для хранения температуры te1 для ТЭН te2 для куллера
@@ -137,6 +137,16 @@ void printMainWindow() {
   
     lcd.setCursor(0, 0); lcd.print("t:"); lcd.print(TE1); lcd.print("C"); //Температура текущая 
     lcd.setCursor(8, 0); lcd.print("T:"); lcd.print(timeCyclMins); lcd.print(":"); lcd.print(timeCyclSecs); // Время общее. Глобальный таймер
+    lcd.setCursor(0, 1); lcd.print("t:"); lcd.print(tempValue); lcd.print("C"); //Температура цыкла 
+    lcd.setCursor(8, 1); lcd.print("T:"); lcd.print(timesValue); lcd.print(" min"); //Время цыкла
+    
+    lcd.setCursor(0, 0); lcd.print("t:"); lcd.print(TE1); lcd.print("C"); //Температура текущая 
+    lcd.setCursor(8, 0); lcd.print("T:"); lcd.print(timeCyclMins);
+
+    // Вывод секунд с добавлением ведущего нуля, если секунды меньше 10
+    lcd.print(":"); 
+    if(timeCyclSecs < 10) lcd.print("0"); lcd.print(timeCyclSecs); 
+
     lcd.setCursor(0, 1); lcd.print("t:"); lcd.print(tempValue); lcd.print("C"); //Температура цыкла 
     lcd.setCursor(8, 1); lcd.print("T:"); lcd.print(timesValue); lcd.print(" min"); //Время цыкла
 }
@@ -239,10 +249,7 @@ bool sum_setting(){
   else {
     return false;
   }
-  
-
 }
-
 
 //функци управления процессом термопауз
 void pause_control_function(bool permission);
@@ -277,42 +284,34 @@ void pause_control_function(bool permission){
 
         if (flagCycl) {
           static uint32_t tmr4;
+          //Это просто таймер которые отсчитыввает время и показывает его на экране
           if (millis() - tmr4 >= 1000) {
             tmr4 = millis();
-            totalCurrentSec -= 1;
+            if (totalCurrentSec >= 0) totalCurrentSec -= 1;
             timeCyclHours = (totalCurrentSec / 3600ul);        // часы
             timeCyclMins = (totalCurrentSec % 3600ul) / 60ul;  // минуты
             timeCyclSecs = (totalCurrentSec % 3600ul) % 60ul;  // секунды
           }
-          if (millis() >= (timesValue * 60ul * 1000ul) + currentMillis) {
-            valsIndex += 2;
+          
+          if (totalCurrentSec <= 0 ) {
             timerStart = true;
             flagCycl = false;
+              if (valsIndex < sizeof(vals) / sizeof(vals[0]) - 2) {
+              valsIndex += 2;
+              } else {
+                // Достигнут конец массива vals, останавливаем цикл
+                valsIndex = 0; // Сброс индекса или установка его в нужное значение
+                StrStp = false; // Предположим, что это ваш флаг для остановки
+                settingsMainMenu[2] = settingsStart[0];//Записываем в главное меню 'Stop'
+                startingCycle = false; // Остановка цикла
+                timeCyclHours = 0; // часы
+                timeCyclMins = 0;  // минуты
+                timeCyclSecs = 0;  // секунды
+            }
+
           }
-
-          if (valsIndex > SETTINGS_SETTING) {
-            flagCycl = false;
-            timerStart = true;
-            valsIndex = false;
-            StrStp = false;
-            settingsMainMenu[2] = settingsStart[0]; //Записываем в главное меню 'Stop'
-            valsIndex = 0;
-
-          }
-
         }
       }
-    if (tempValue == 0 || timesValue == 0){
-      flagCycl = false;
-      timerStart = true;
-      valsIndex = false;
-      settingsMainMenu[2] = settingsStart[0]; //Записываем в главное меню 'Stop'
-      valsIndex = 0;
-      StrStp = false;
-      timeCyclHours = 0; // часы
-      timeCyclMins = 0;  // минуты
-      timeCyclSecs = 0;  // секунды
-    }
   }
   else {
     digitalWrite(LEDSTART, LOW);
@@ -320,7 +319,6 @@ void pause_control_function(bool permission){
     f_pid();
   }
 }
-
 
 void setup() {
   Serial.begin(9600); //Волшебная цифра 
@@ -470,7 +468,6 @@ void loop() {
           settingPosition = !settingPosition;
           arrowPos = 0;
           printMainMenu(); 
-          //Serial.println("SettingsValue");
           menu = Menu::MainMenu;
         }
       }
@@ -492,6 +489,4 @@ void loop() {
     case Menu::StartStopSettings:
       break;
   }
-
-//---------------------------------------
 }
