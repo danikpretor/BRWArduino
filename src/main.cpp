@@ -135,20 +135,21 @@ void f_timer() {
 void printMainWindow(); //функция для вывода на экран меню текущих значений
 void printMainWindow() { 
   
-    lcd.setCursor(0, 0); lcd.print("t:"); lcd.print(TE1); lcd.print("C"); //Температура текущая 
-    lcd.setCursor(8, 0); lcd.print("T:"); lcd.print(timeCyclMins); lcd.print(":"); lcd.print(timeCyclSecs); // Время общее. Глобальный таймер
-    lcd.setCursor(0, 1); lcd.print("t:"); lcd.print(tempValue); lcd.print("C"); //Температура цыкла 
+    lcd.setCursor(0, 0); lcd.print("t:"); //Температура текущая 
+    if(TE1 < 10) lcd.print("0:"); 
+    lcd.print(TE1); lcd.print("C");
+
+    lcd.setCursor(8, 0); lcd.print("T:"); lcd.print(timeCyclMins);// Вывод секунд с добавлением ведущего нуля, если секунды меньше 10
+    lcd.print(":"); 
+    if(timeCyclSecs < 10) lcd.print("0"); 
+    lcd.print(timeCyclSecs); 
+    
+    lcd.setCursor(0, 1); lcd.print("t:"); //Температура цыкла 
+    if(timeCyclSecs < 10) lcd.print("0"); 
+    lcd.print(tempValue); lcd.print("C");
+
     lcd.setCursor(8, 1); lcd.print("T:"); lcd.print(timesValue); lcd.print(" min"); //Время цыкла
     
-    lcd.setCursor(0, 0); lcd.print("t:"); lcd.print(TE1); lcd.print("C"); //Температура текущая 
-    lcd.setCursor(8, 0); lcd.print("T:"); lcd.print(timeCyclMins);
-
-    // Вывод секунд с добавлением ведущего нуля, если секунды меньше 10
-    lcd.print(":"); 
-    if(timeCyclSecs < 10) lcd.print("0"); lcd.print(timeCyclSecs); 
-
-    lcd.setCursor(0, 1); lcd.print("t:"); lcd.print(tempValue); lcd.print("C"); //Температура цыкла 
-    lcd.setCursor(8, 1); lcd.print("T:"); lcd.print(timesValue); lcd.print(" min"); //Время цыкла
 }
 
 void printSettingsValue();
@@ -287,7 +288,7 @@ void pause_control_function(bool permission){
           //Это просто таймер которые отсчитыввает время и показывает его на экране
           if (millis() - tmr4 >= 1000) {
             tmr4 = millis();
-            if (totalCurrentSec >= 0) totalCurrentSec -= 1;
+            if (totalCurrentSec > 0) totalCurrentSec -= 1;
             timeCyclHours = (totalCurrentSec / 3600ul);        // часы
             timeCyclMins = (totalCurrentSec % 3600ul) / 60ul;  // минуты
             timeCyclSecs = (totalCurrentSec % 3600ul) % 60ul;  // секунды
@@ -331,12 +332,13 @@ void setup() {
   Serial.println("Start");
   
   lcd.clear();
-  lcd.setCursor(0, 0); lcd.print(" Brewery V 0.7");
+  lcd.setCursor(0, 0); lcd.print(" Brewery V 0.9");
   lcd.setCursor(0, 1); lcd.print("");
   
   f_TE1();
 
   delay(1000);
+  
   sensTE1.requestTemp();     // запрос температуры 1 датчика
   sensTE2.requestTemp();    // запрос температуры 2 вентелятора
   
@@ -349,7 +351,7 @@ void setup() {
   pid.setDirection(NORMAL); // направление регулирования (NORMAL/REVERSE). ПО УМОЛЧАНИЮ СТОИТ NORMAL - нагрев
   pid.setLimits(0, 255);    // пределы (ставим для 8 битного ШИМ). ПО УМОЛЧАНИЮ СТОЯТ 0 И 255
   
-  delay(3000);
+  delay(1000);
 
   lcd.clear();
   lcd.setCursor(4, 0); lcd.print("TE1 ");
@@ -357,7 +359,7 @@ void setup() {
   lcd.setCursor(4, 1); lcd.print("TE2 ");
   lcd.setCursor(8, 1); lcd.print(TE2);
 
-  delay(2000);
+  delay(5000);
 
   printMainMenu();
 }
