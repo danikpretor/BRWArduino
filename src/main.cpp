@@ -137,23 +137,24 @@ void printMainWindow() {
  static uint32_t tmr9;
  if (millis() - tmr9 >= PIDperiod*5) {
     tmr9 = millis();
-    lcd.clear();
- }
-    lcd.setCursor(0, 0); lcd.print("t:"); //Температура текущая 
-    if(TE1 < 10) lcd.print("0"); 
-    lcd.print(TE1); lcd.print("C");
-
-    lcd.setCursor(8, 0); lcd.print("T:"); lcd.print(timeCyclMins);// Вывод секунд с добавлением ведущего нуля, если секунды меньше 10
-    lcd.print(":"); 
-    if(timeCyclSecs < 10) lcd.print("0"); 
-    lcd.print(timeCyclSecs); 
     
-    lcd.setCursor(0, 1); lcd.print("t:"); //Температура цыкла 
-    if(tempValue < 10) lcd.print("0"); 
-    lcd.print(tempValue); lcd.print("C");
+ }
+  lcd.setCursor(0, 0); lcd.print("t:"); //Температура текущая 
+  if(TE1 < 10) lcd.print("0"); 
+  lcd.print(TE1); lcd.print("C");
 
-    lcd.setCursor(8, 1); lcd.print("T:"); lcd.print(timesValue); lcd.print(" min"); //Время цыкла
+  lcd.setCursor(8, 0); lcd.print("T:"); lcd.print(timeCyclMins);// Вывод секунд с добавлением ведущего нуля, если секунды меньше 10
+  lcd.print(":"); 
+  if(timeCyclSecs < 10) lcd.print("0"); 
+  lcd.print(timeCyclSecs); 
+  
+  lcd.setCursor(0, 1); lcd.print("t:"); //Температура цыкла 
+  if(tempValue < 10) lcd.print("0"); 
+  lcd.print(tempValue); lcd.print("C");
+
+  lcd.setCursor(8, 1); lcd.print("T:"); lcd.print(timesValue); lcd.print(" min"); //Время цыкла
 }
+
 
 void printSettingsValue();
 void printSettingsValue() {  //Функция для вывода на экран меню настроек
@@ -408,6 +409,7 @@ void loop() {
           menu = Menu::SettingsValue;
         }
         if (arrowPos == 1) {
+          lcd.clear();
           printMainWindow();
           menu = Menu::MainWindow;
         }
@@ -485,6 +487,7 @@ void loop() {
       break;
 
     case Menu::MainWindow:
+      
       printMainWindow();
       if (enc1.isClick()){ //По нажатию проваливаемся в соответсвующее меню
         lcd.clear();
