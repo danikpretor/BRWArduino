@@ -134,9 +134,13 @@ void f_timer() {
 
 void printMainWindow(); //функция для вывода на экран меню текущих значений
 void printMainWindow() { 
-  
+ static uint32_t tmr9;
+ if (millis() - tmr9 >= PIDperiod*5) {
+    tmr9 = millis();
+    lcd.clear();
+ }
     lcd.setCursor(0, 0); lcd.print("t:"); //Температура текущая 
-    if(TE1 < 10) lcd.print("0:"); 
+    if(TE1 < 10) lcd.print("0"); 
     lcd.print(TE1); lcd.print("C");
 
     lcd.setCursor(8, 0); lcd.print("T:"); lcd.print(timeCyclMins);// Вывод секунд с добавлением ведущего нуля, если секунды меньше 10
@@ -145,11 +149,10 @@ void printMainWindow() {
     lcd.print(timeCyclSecs); 
     
     lcd.setCursor(0, 1); lcd.print("t:"); //Температура цыкла 
-    if(timeCyclSecs < 10) lcd.print("0"); 
+    if(tempValue < 10) lcd.print("0"); 
     lcd.print(tempValue); lcd.print("C");
 
     lcd.setCursor(8, 1); lcd.print("T:"); lcd.print(timesValue); lcd.print(" min"); //Время цыкла
-    
 }
 
 void printSettingsValue();
@@ -309,7 +312,6 @@ void pause_control_function(bool permission){
                 timeCyclMins = 0;  // минуты
                 timeCyclSecs = 0;  // секунды
             }
-
           }
         }
       }
@@ -318,6 +320,14 @@ void pause_control_function(bool permission){
     digitalWrite(LEDSTART, LOW);
     pid.setpoint = 0;
     f_pid();
+    valsIndex = 0; // Сброс индекса или установка его в нужное значение
+    StrStp = false; // Предположим, что это ваш флаг для остановки
+    startingCycle = false; // Остановка цикла
+
+    timeCyclHours = 0; // часы
+    timeCyclMins = 0;  // минуты
+    timeCyclSecs = 0;  // секунды
+    
   }
 }
 
@@ -332,13 +342,13 @@ void setup() {
   Serial.println("Start");
   
   lcd.clear();
-  lcd.setCursor(0, 0); lcd.print(" Brewery V 0.9");
+  lcd.setCursor(0, 0); lcd.print(" Brewery V 1.01");
   lcd.setCursor(0, 1); lcd.print("");
   
   f_TE1();
 
   delay(1000);
-  
+
   sensTE1.requestTemp();     // запрос температуры 1 датчика
   sensTE2.requestTemp();    // запрос температуры 2 вентелятора
   
@@ -398,7 +408,6 @@ void loop() {
           menu = Menu::SettingsValue;
         }
         if (arrowPos == 1) {
-          lcd.clear();
           printMainWindow();
           menu = Menu::MainWindow;
         }
@@ -476,10 +485,7 @@ void loop() {
       break;
 
     case Menu::MainWindow:
-      if(timeSecs_tmp != timeSecs) {
-        timeSecs_tmp = timeSecs;
-        printMainWindow();
-      }
+      printMainWindow();
       if (enc1.isClick()){ //По нажатию проваливаемся в соответсвующее меню
         lcd.clear();
         Serial.println("MainWindow");
